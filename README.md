@@ -2,7 +2,11 @@
 save the princess, shit idk if there's a princess   
 
 
-<img src="icon.png" style="width:83px;">    
+<img src="icon.png" style="width:83px;">      
+
+
+<img src="winrec.gif" style="width:900px;">   
+
 
 <img src="Android/ACSProjects/PropHuntZELDAvertical/app/src/main/res/drawable/ic_launcher.png" style="width:83px;">    
 
