@@ -1,0 +1,2248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PropHunt - Zelda</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #5c93c4;
+            transition: background-color 0.5s ease;
+        }
+
+        #ui {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 95%;
+            max-width: 650px;
+            background: rgba(0, 0, 0, 0.65);
+            padding: 10px 14px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+            z-index: 10;
+            font-size: 12px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #health-container { color: #2ecc71; }
+        #knockdown-container { color: #e74c3c; }
+        #glider-status-container { color: #f1c40f; }
+        #depth-container { color: #3498db; }
+        #best-depth-container { color: #9b59b6; }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        #stamina-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60px;
+            height: 60px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 6;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #stamina-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        #damage-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(231, 76, 60, 0);
+            pointer-events: none;
+            z-index: 15;
+            transition: background 0.15s ease;
+        }
+
+        #wasted-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            z-index: 30;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        #pitch-black-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            pointer-events: auto;
+            z-index: 40;
+            display: none;
+        }
+
+        .try-again-container {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            z-index: 50;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .menu-options-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .toggle-btn {
+            padding: 10px 18px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+            pointer-events: auto;
+        }
+
+        .toggle-btn.active {
+            background: rgba(46, 204, 113, 0.8);
+            border-color: #2ecc71;
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.8);
+        }
+
+        #terrain-btn.active, #try-terrain-btn.active {
+            background: rgba(155, 89, 182, 0.8);
+            border-color: #9b59b6;
+            box-shadow: 0 0 15px rgba(155, 89, 182, 0.8);
+        }
+
+        .try-again-btn {
+            padding: 14px 32px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background: #2ecc71;
+            border: 2px solid #27ae60;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.6);
+            transition: transform 0.2s, background 0.2s;
+            pointer-events: auto;
+        }
+
+        @keyframes redBlueFlash {
+            0% { background: rgba(255, 0, 0, 0.7); }
+            50% { background: rgba(0, 0, 255, 0.7); }
+            100% { background: rgba(255, 0, 0, 0.7); }
+        }
+
+        #wasted-text {
+            font-family: 'Impact', sans-serif;
+            font-size: 80px;
+            color: #b30000;
+            letter-spacing: 4px;
+            text-shadow: 0 0 10px black, 0 0 20px black;
+        }
+
+        @keyframes pulseEffect {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            50% { opacity: 1; transform: scale(1.05); }
+            100% { opacity: 0.3; transform: scale(0.95); }
+        }
+
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            color: white;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 60;
+        }
+
+        .menu-title {
+            font-family: 'Impact', sans-serif;
+            font-size: 65px;
+            color: #f1c40f;
+            letter-spacing: 4px;
+            text-shadow: 0 0 15px black, 0 0 30px rgba(241, 196, 15, 0.6);
+            animation: pulseEffect 1.8s ease-in-out infinite;
+            margin-bottom: 10px;
+        }
+
+        .controls-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px 25px;
+            margin: 15px 0;
+            max-width: 520px;
+            text-align: left;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #ddd;
+        }
+
+        .controls-card h3 {
+            margin: 0 0 8px 0;
+            color: #2ecc71;
+            font-size: 15px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 20px;
+        }
+
+        .menu-btn {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #2ecc71;
+            color: white;
+            border: 2px solid #27ae60;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(46, 204, 113, 0.4);
+            transition: transform 0.2s, background 0.2s;
+            margin-top: 15px;
+        }
+
+        #warning-toast {
+            position: absolute;
+            top: 75px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(231, 76, 60, 0.9);
+            border: 2px solid #c0392b;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 13px;
+            z-index: 20;
+            display: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ui">
+        <div>PropHunt</div>
+        <div id="health-container">HEALTH: <span id="health-val">100</span></div>
+        <div id="knockdown-container">ENEMIES: <span id="knockdown-val">0</span></div>
+        <div id="depth-container">STAGE: <span id="depth-val">0</span></div>
+        <div id="best-depth-container">BEST: <span id="best-depth-val">0</span></div>
+        <div id="glider-status-container">GLIDER: <span id="glider-val">NONE</span></div>
+    </div>
+
+    <div id="warning-toast">CLEAR ALL ENEMIES BEFORE EXITING AREA!</div>
+
+    <div id="crosshair"></div>
+    <div id="stamina-container">
+        <canvas id="stamina-canvas" width="100" height="100"></canvas>
+    </div>
+
+    <div id="damage-flash"></div>
+    
+    <div id="wasted-screen">
+        <div id="wasted-text">WASTED</div>
+    </div>
+
+    <div id="pitch-black-screen"></div>
+
+    <div id="try-again-wasted-container" class="try-again-container">
+        <div class="menu-options-row">
+            <button id="try-night-mode-btn" class="toggle-btn">NIGHT MODE</button>
+            <button id="try-terrain-btn" class="toggle-btn">FLAT GROUND</button>
+        </div>
+        <button id="try-again-wasted" class="try-again-btn">TRY AGAIN</button>
+    </div>
+
+    <div id="try-again-black-container" class="try-again-container" style="z-index: 45;">
+        <div class="menu-options-row">
+            <button id="black-night-mode-btn" class="toggle-btn">NIGHT MODE</button>
+            <button id="black-terrain-btn" class="toggle-btn">FLAT GROUND</button>
+        </div>
+        <button id="try-again-black" class="try-again-btn">TRY AGAIN</button>
+    </div>
+
+    <!-- Initial Start Overlay -->
+    <div id="instructions" class="overlay-screen">
+        <div class="menu-title">PropHunt: ZELDA</div>
+        
+        <div class="controls-card">
+            <h3>Game Controls</h3>
+            <h5>keyboard and mouse or nintendo switch controller</h5>
+            <div class="controls-grid">
+		<div><strong>Walk:</strong> wasd or left stick</div>
+		<div><strong>Look:</strong> mouse drag or right stick</div>
+		<div><strong>Pick up / Throw / Melee:</strong> left click or R/B</div>
+		<div><strong>Jump:</strong> spacebar or Y</div>
+		<div><strong>Toggle glide/freefall:</strong> c or A</div>
+		<div><strong>Sprint:</strong> shift or L</div>
+            </div>
+        </div>
+
+        <p style="max-width: 500px; line-height: 1.5; margin-bottom: 15px; color: #ddd; font-size: 13px;">
+            you CANNOT glide while enemies remain present on a stage.
+        </p>
+        <div class="menu-options-row" style="margin-bottom: 15px;">
+            <button id="menu-night-mode-btn" class="toggle-btn">NIGHT MODE</button>
+            <button id="menu-terrain-btn" class="toggle-btn">FLAT GROUND</button>
+        </div>
+        <button id="start-btn" class="menu-btn">PLAY</button>
+    </div>
+
+    <script src="three.min.js"></script>
+
+    <script>
+        let scene, camera, renderer;
+        let currentGroundMesh, currentGrid;
+        let nextGroundMesh, nextGrid;
+        let knife;
+        let targets = [];
+        let spinningGoodGuys = [];
+        let enemyKnives = [];
+        let droppedEnemyKnives = [];
+        let obstacles = [];
+        let nextObstacles = [];
+
+        let currentPlatformIndex = 0;
+        let highestStageCleared = parseInt(localStorage.getItem('prophunt_max_stage_cleared') || '0', 10);
+        
+        let totalEnemiesSpawnedThisStage = 0;
+        let targetTotalEnemiesForThisStage = 5;
+
+        let currentPlatformOffset = new THREE.Vector3(0, 0, 0);
+        let nextPlatformOffset = new THREE.Vector3(0, -35, 220);
+        const PLATFORM_OFFSET_STEP = new THREE.Vector3(0, -35, 220);
+        const GLIDER_RELATIVE_POS = new THREE.Vector3(0, 0, 92);
+
+        let activeGliderMesh;
+        let gliderPickupMesh = null;
+        let nextGliderPickupMesh = null;
+        let currentGliderPickupPos = new THREE.Vector3();
+        let nextGliderPickupPos = new THREE.Vector3();
+        let clearanceBeaconMesh = null;
+
+        let hasGlider = false;
+        let isGliding = false;
+        let isFreeFalling = false;
+        let glideForwardVelocity = new THREE.Vector3();
+
+        const gliderStatusEl = document.getElementById('glider-val');
+        const depthValEl = document.getElementById('depth-val');
+        const bestDepthValEl = document.getElementById('best-depth-val');
+        const warningToastEl = document.getElementById('warning-toast');
+        let warningToastTimer = null;
+
+        let ambientLight, sunLight;
+        let flashlight;
+        let nightSkyGroup;
+        let starPointsMesh = null;
+        let starDataAttributes = [];
+        let shootingStarLine = null;
+        let shootingStarData = null;
+
+        let isNightMode = false;
+        let isHillsMode = false;
+        let isDead = false;
+        let isGameStarted = false;
+
+        let playerHealth = 100;
+        const healthValEl = document.getElementById('health-val');
+        const knockdownValEl = document.getElementById('knockdown-val');
+        const damageFlashEl = document.getElementById('damage-flash');
+        const wastedScreen = document.getElementById('wasted-screen');
+        const wastedText = document.getElementById('wasted-text');
+        const pitchBlackScreen = document.getElementById('pitch-black-screen');
+        const tryAgainWastedContainer = document.getElementById('try-again-wasted-container');
+        const tryAgainBlackContainer = document.getElementById('try-again-black-container');
+        const tryAgainWastedBtn = document.getElementById('try-again-wasted');
+        const tryAgainBlackBtn = document.getElementById('try-again-black');
+
+        let stamina = 100;
+        const maxStamina = 100;
+        let isSprinting = false;
+        let staminaRechargeTimer = 0;
+        const STAMINA_DRAIN_RATE = 12;
+        const GLIDER_STAMINA_DRAIN = 7;
+        const STAMINA_RECHARGE_RATE = 45;
+        const STAMINA_RECHARGE_DELAY = 0.5;
+        const staminaContainer = document.getElementById('stamina-container');
+        const staminaCanvas = document.getElementById('stamina-canvas');
+        const staminaCtx = staminaCanvas.getContext('2d');
+        let lastSprintTapTime = 0;
+
+        let isHoldingKnife = true;
+        let isStuckInTarget = false;
+        let stuckTarget = null;
+        let knifeVelocity = new THREE.Vector3();
+        let spinAxis = new THREE.Vector3();
+        let spinSpeed = 0;
+        const GRAVITY = 12;
+        const PICKUP_DISTANCE = 5.0;
+        const BASE_THROW_FORCE = 22;
+        const MELEE_RANGE = 2.5;
+        let closestTargetInRange = null;
+
+        const playerPosition = new THREE.Vector3(0, 1.6, 5);
+        let playerVerticalVelocity = 0;
+        let isJumping = false;
+        const PLAYER_HEIGHT = 1.6;
+        const JUMP_FORCE = 6.0;
+
+        let cameraYaw = 0;
+        let cameraPitch = 0;
+
+        // Keyboard & Mouse Movement State
+        const keysState = {};
+        let moveInput = { x: 0, y: 0 };
+
+        // Gamepad State Map
+        let prevGamepadButtonStates = {};
+
+        let prevTime = performance.now();
+        let targetSpawnTimer = 0;
+
+        const instructions = document.getElementById('instructions');
+        const startBtn = document.getElementById('start-btn');
+
+        window.onload = function () {
+            init();
+            animate();
+        };
+
+        function getEnemiesRemaining() {
+            if (currentPlatformIndex === 0) return 0;
+            let activeTargetsCount = 0;
+            for (let t of targets) {
+                if (!t.userData.isHit) activeTargetsCount++;
+            }
+            const unspawnedEnemies = Math.max(0, targetTotalEnemiesForThisStage - totalEnemiesSpawnedThisStage);
+            return activeTargetsCount + unspawnedEnemies;
+        }
+
+        function updateEnemiesRemainingUI() {
+            knockdownValEl.textContent = getEnemiesRemaining();
+            checkStageClearanceBeacon();
+        }
+
+        function checkStageClearanceBeacon() {
+            const enemiesLeft = getEnemiesRemaining();
+            if (enemiesLeft === 0) {
+                if (gliderPickupMesh && !gliderPickupMesh.visible) {
+                    gliderPickupMesh.visible = true;
+                }
+                if (!clearanceBeaconMesh) {
+                    clearanceBeaconMesh = createClearanceBeacon();
+                    const beaconPos = nextPlatformOffset.clone();
+                    beaconPos.y = getTerrainHeight(beaconPos.x, beaconPos.z);
+                    clearanceBeaconMesh.position.copy(beaconPos);
+                    scene.add(clearanceBeaconMesh);
+                }
+            } else {
+                if (gliderPickupMesh && gliderPickupMesh.visible) {
+                    gliderPickupMesh.visible = false;
+                }
+                if (clearanceBeaconMesh) {
+                    scene.remove(clearanceBeaconMesh);
+                    clearanceBeaconMesh = null;
+                }
+            }
+        }
+
+        function createClearanceBeacon() {
+            const beaconGroup = new THREE.Group();
+            const beamGeo = new THREE.CylinderGeometry(2.5, 6.0, 250, 32, 1, true);
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: 0x00ffcc,
+                transparent: true,
+                opacity: 0.45,
+                side: THREE.DoubleSide,
+                blending: THREE.AdditiveBlending
+            });
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            beam.position.y = 125;
+            beaconGroup.add(beam);
+
+            const coreGeo = new THREE.CylinderGeometry(0.8, 0.8, 250, 16);
+            const coreMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const core = new THREE.Mesh(coreGeo, coreMat);
+            core.position.y = 125;
+            beaconGroup.add(core);
+
+            return beaconGroup;
+        }
+
+        function updateHighestStageDisplay() {
+            bestDepthValEl.textContent = highestStageCleared;
+        }
+
+        function showAreaExitWarning() {
+            warningToastEl.style.display = 'block';
+            if (warningToastTimer) clearTimeout(warningToastTimer);
+            warningToastTimer = setTimeout(() => {
+                warningToastEl.style.display = 'none';
+            }, 2000);
+        }
+
+        function getTerrainHeight(x, z) {
+            let relX = x - currentPlatformOffset.x;
+            let relZ = z - currentPlatformOffset.z;
+            const inCurrentBounds = (Math.abs(relX) <= 100 && Math.abs(relZ) <= 100);
+
+            let nextRelX = x - nextPlatformOffset.x;
+            let nextRelZ = z - nextPlatformOffset.z;
+            const inNextBounds = (Math.abs(nextRelX) <= 100 && Math.abs(nextRelZ) <= 100);
+
+            if (inNextBounds && !inCurrentBounds) {
+                return calculateRawTerrainHeight(nextRelX, nextRelZ, nextPlatformOffset.y);
+            }
+            return calculateRawTerrainHeight(relX, relZ, currentPlatformOffset.y);
+        }
+
+        function calculateRawTerrainHeight(relX, relZ, baseY) {
+            if (!isHillsMode) return baseY;
+            return baseY + Math.sin(relX * 0.08) * 2.2 + Math.cos(relZ * 0.08) * 2.2 + Math.sin(relX * 0.03 + relZ * 0.03) * 3.5;
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x5c93c4);
+            scene.fog = new THREE.FogExp2(0x5c93c4, 0.005);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.rotation.order = 'YXZ';
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.75);
+            scene.add(ambientLight);
+
+            sunLight = new THREE.DirectionalLight(0xfff8e7, 1.1);
+            sunLight.position.set(30, 50, 30);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+
+            flashlight = new THREE.SpotLight(0xffffff, 0, 40, Math.PI / 6, 0.5, 1.5);
+            flashlight.position.set(0, 0, 0);
+            flashlight.target.position.set(0, 0, -10);
+            scene.add(flashlight);
+            scene.add(flashlight.target);
+
+            createNightEnvironment();
+            
+            activeGliderMesh = createZeldaGliderModel();
+            activeGliderMesh.visible = false;
+            scene.add(activeGliderMesh);
+
+            currentPlatformOffset.set(0, 0, 0);
+            nextPlatformOffset.copy(currentPlatformOffset).add(PLATFORM_OFFSET_STEP);
+
+            currentGroundMesh = createTerrainMesh(currentPlatformOffset);
+            currentGrid = createGridHelper(currentPlatformOffset);
+
+            nextGroundMesh = createTerrainMesh(nextPlatformOffset);
+            nextGrid = createGridHelper(nextPlatformOffset);
+
+            setupRecursiveStageItems();
+
+            spawnObstaclesForPlatform(currentPlatformOffset, obstacles);
+            spawnObstaclesForPlatform(nextPlatformOffset, nextObstacles);
+
+            knife = createKnifeModel(false);
+            scene.add(knife);
+
+            updateHighestStageDisplay();
+            resetTargets();
+
+            setupKeyboardAndMouseControls();
+
+            startBtn.addEventListener('click', () => {
+                instructions.style.display = 'none';
+                isGameStarted = true;
+                restartGame();
+                document.body.requestPointerLock();
+            });
+
+            tryAgainWastedBtn.addEventListener('click', () => {
+                restartGame();
+                document.body.requestPointerLock();
+            });
+
+            tryAgainBlackBtn.addEventListener('click', () => {
+                restartGame();
+                document.body.requestPointerLock();
+            });
+
+            const bindMenuToggles = (nightBtnId, terrainBtnId) => {
+                const nBtn = document.getElementById(nightBtnId);
+                const tBtn = document.getElementById(terrainBtnId);
+
+                if (nBtn) {
+                    nBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        isNightMode = !isNightMode;
+                        syncToggleUIState();
+                    });
+                }
+
+                if (tBtn) {
+                    tBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        isHillsMode = !isHillsMode;
+                        rebuildTerrains();
+                        syncToggleUIState();
+                    });
+                }
+            };
+
+            bindMenuToggles('menu-night-mode-btn', 'menu-terrain-btn');
+            bindMenuToggles('try-night-mode-btn', 'try-terrain-btn');
+            bindMenuToggles('black-night-mode-btn', 'black-terrain-btn');
+
+            window.addEventListener('resize', onWindowResize);
+            syncToggleUIState();
+            drawStaminaWheel();
+        }
+
+        function setupKeyboardAndMouseControls() {
+            window.addEventListener('keydown', (e) => {
+                keysState[e.code] = true;
+
+                if (isGameStarted && !isDead) {
+                    if (e.code === 'KeyC') {
+                        if (hasGlider && (isGliding || isFreeFalling)) {
+                            toggleFreeFallMode();
+                        }
+                    }
+                    if (e.code === 'Space') {
+                        triggerJump();
+                    }
+                }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                keysState[e.code] = false;
+            });
+
+            document.addEventListener('click', () => {
+                if (isGameStarted && !isDead && document.pointerLockElement !== document.body) {
+                    document.body.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('mousedown', (e) => {
+                if (isGameStarted && !isDead && e.button === 0 && document.pointerLockElement === document.body) {
+                    handleInteractClick();
+                }
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isGameStarted && !isDead && document.pointerLockElement === document.body) {
+                    const sensitivity = 0.0022;
+                    cameraYaw -= e.movementX * sensitivity;
+                    cameraPitch -= e.movementY * sensitivity;
+                    cameraPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, cameraPitch));
+                }
+            });
+        }
+
+        function updateKeyboardInput() {
+            let moveX = 0;
+            let moveY = 0;
+
+            // Inverted Forward / Backwards mapping (W moves back, S moves forward)
+            if (keysState['KeyW'] || keysState['ArrowUp']) moveY -= 1;
+            if (keysState['KeyS'] || keysState['ArrowDown']) moveY += 1;
+
+            if (keysState['KeyA'] || keysState['ArrowLeft']) moveX += 1;
+            if (keysState['KeyD'] || keysState['ArrowRight']) moveX -= 1;
+
+            moveInput.x = moveX;
+            moveInput.y = moveY;
+
+            isSprinting = !!(keysState['ShiftLeft'] || keysState['ShiftRight']) && stamina > 5;
+        }
+
+        function syncToggleUIState() {
+            const nightBtns = [
+                document.getElementById('menu-night-mode-btn'),
+                document.getElementById('try-night-mode-btn'),
+                document.getElementById('black-night-mode-btn')
+            ];
+            const terrainBtns = [
+                document.getElementById('menu-terrain-btn'),
+                document.getElementById('try-terrain-btn'),
+                document.getElementById('black-terrain-btn')
+            ];
+
+            nightBtns.forEach(btn => {
+                if (btn) btn.classList.toggle('active', isNightMode);
+            });
+
+            terrainBtns.forEach(btn => {
+                if (btn) {
+                    btn.classList.toggle('active', isHillsMode);
+                    btn.textContent = isHillsMode ? 'HILLS' : 'FLAT GROUND';
+                }
+            });
+
+            applyEnvironmentStyles();
+        }
+
+        function rebuildTerrains() {
+            if (currentGroundMesh) disposeMesh(currentGroundMesh);
+            if (currentGrid) disposeMesh(currentGrid);
+            if (nextGroundMesh) disposeMesh(nextGroundMesh);
+            if (nextGrid) disposeMesh(nextGrid);
+
+            currentGroundMesh = createTerrainMesh(currentPlatformOffset);
+            currentGrid = createGridHelper(currentPlatformOffset);
+
+            nextGroundMesh = createTerrainMesh(nextPlatformOffset);
+            nextGrid = createGridHelper(nextPlatformOffset);
+
+            setupRecursiveStageItems();
+        }
+
+        function applyEnvironmentStyles() {
+            if (isNightMode) {
+                scene.background.set(0x050b14);
+                scene.fog.color.set(0x050b14);
+                scene.fog.density = 0.015;
+                ambientLight.intensity = 0.08;
+                sunLight.intensity = 0.15;
+                sunLight.color.set(0x88bbff);
+                flashlight.intensity = 4.5;
+                if (nightSkyGroup) nightSkyGroup.visible = true;
+            } else {
+                scene.background.set(0x5c93c4);
+                scene.fog.color.set(0x5c93c4);
+                scene.fog.density = 0.005;
+                ambientLight.intensity = 0.75;
+                sunLight.intensity = 1.1;
+                sunLight.color.set(0xfff8e7);
+                flashlight.intensity = 0;
+                if (nightSkyGroup) nightSkyGroup.visible = false;
+            }
+        }
+
+        function toggleFreeFallMode() {
+            if (isFreeFalling) {
+                if (stamina > 0) {
+                    isFreeFalling = false;
+                    isGliding = true;
+                    activeGliderMesh.visible = true;
+                }
+            } else if (isGliding) {
+                isGliding = false;
+                isFreeFalling = true;
+                activeGliderMesh.visible = false;
+                
+                const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+                glideForwardVelocity.copy(forward).multiplyScalar(12.0);
+            }
+        }
+
+        function createZeldaGliderModel() {
+            const gliderGroup = new THREE.Group();
+
+            const sailShape = new THREE.Shape();
+            sailShape.moveTo(-3.2, 0);
+            sailShape.quadraticCurveTo(0, 0.8, 3.2, 0);
+            sailShape.quadraticCurveTo(1.6, -1.6, 0, -1.8);
+            sailShape.quadraticCurveTo(-1.6, -1.6, -3.2, 0);
+
+            const extrudeSettings = { depth: 0.04, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.02, bevelThickness: 0.02 };
+            const sailGeo = new THREE.ExtrudeGeometry(sailShape, extrudeSettings);
+            const sailMat = new THREE.MeshStandardMaterial({ color: 0x9e2a2b, roughness: 0.5, metalness: 0.1 });
+            const sail = new THREE.Mesh(sailGeo, sailMat);
+            sail.rotation.x = Math.PI / 2;
+            sail.castShadow = true;
+            gliderGroup.add(sail);
+
+            const stripeMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.4 });
+            const stripeGeo = new THREE.BoxGeometry(6.1, 0.06, 0.25);
+            const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+            stripe.position.set(0, 0.02, -0.7);
+            gliderGroup.add(stripe);
+
+            const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a2c11, roughness: 0.8 });
+            
+            const crossBarGeo = new THREE.CylinderGeometry(0.06, 0.06, 6.2, 12);
+            const crossBar = new THREE.Mesh(crossBarGeo, woodMat);
+            crossBar.rotation.z = Math.PI / 2;
+            crossBar.position.set(0, -0.05, -0.05);
+            gliderGroup.add(crossBar);
+
+            const strutGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.4, 8);
+            const leftStrut = new THREE.Mesh(strutGeo, woodMat);
+            leftStrut.position.set(-1.2, -0.65, -0.4);
+            leftStrut.rotation.x = -0.3;
+            gliderGroup.add(leftStrut);
+
+            const rightStrut = new THREE.Mesh(strutGeo, woodMat);
+            rightStrut.position.set(1.2, -0.65, -0.4);
+            rightStrut.rotation.x = -0.3;
+            gliderGroup.add(rightStrut);
+
+            const handleGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.7, 8);
+            const leftHandle = new THREE.Mesh(handleGeo, woodMat);
+            leftHandle.position.set(-0.8, -1.2, -0.6);
+            leftHandle.rotation.z = Math.PI / 2;
+            gliderGroup.add(leftHandle);
+
+            const rightHandle = new THREE.Mesh(handleGeo, woodMat);
+            rightHandle.position.set(0.8, -1.2, -0.6);
+            rightHandle.rotation.z = Math.PI / 2;
+            gliderGroup.add(rightHandle);
+
+            gliderGroup.scale.set(0.65, 0.65, 0.65);
+            return gliderGroup;
+        }
+
+        function createGliderPickup() {
+            const pickup = new THREE.Group();
+            const gliderModel = createZeldaGliderModel();
+            gliderModel.position.set(0, 0.8, 0);
+            pickup.add(gliderModel);
+
+            const baseGeo = new THREE.CylinderGeometry(1.2, 1.5, 0.3, 16);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x334433, roughness: 0.7 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            pickup.add(baseMesh);
+
+            const ringGeo = new THREE.RingGeometry(1.2, 1.6, 32);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+            ringMesh.rotation.x = -Math.PI / 2;
+            ringMesh.position.y = 0.16;
+            pickup.add(ringMesh);
+
+            pickup.visible = false;
+            return pickup;
+        }
+
+        function setupRecursiveStageItems() {
+            if (gliderPickupMesh) scene.remove(gliderPickupMesh);
+            if (nextGliderPickupMesh) scene.remove(nextGliderPickupMesh);
+
+            gliderPickupMesh = createGliderPickup();
+            currentGliderPickupPos.copy(currentPlatformOffset).add(GLIDER_RELATIVE_POS);
+            currentGliderPickupPos.y = getTerrainHeight(currentGliderPickupPos.x, currentGliderPickupPos.z);
+            gliderPickupMesh.position.copy(currentGliderPickupPos);
+            scene.add(gliderPickupMesh);
+
+            nextGliderPickupMesh = createGliderPickup();
+            nextGliderPickupPos.copy(nextPlatformOffset).add(GLIDER_RELATIVE_POS);
+            nextGliderPickupPos.y = getTerrainHeight(nextGliderPickupPos.x, nextGliderPickupPos.z);
+            nextGliderPickupMesh.position.copy(nextGliderPickupPos);
+            scene.add(nextGliderPickupMesh);
+        }
+
+        function disposeMesh(mesh) {
+            if (!mesh) return;
+            if (mesh.geometry) mesh.geometry.dispose();
+            if (mesh.material) {
+                if (Array.isArray(mesh.material)) {
+                    mesh.material.forEach(m => m.dispose());
+                } else {
+                    mesh.material.dispose();
+                }
+            }
+            scene.remove(mesh);
+        }
+
+        function purgeOldStageAssets() {
+            targets.forEach(t => {
+                scene.remove(t);
+                t.traverse(child => {
+                    if (child.isMesh) {
+                        if (child.geometry) child.geometry.dispose();
+                        if (child.material) child.material.dispose();
+                    }
+                });
+            });
+            targets = [];
+
+            spinningGoodGuys.forEach(s => disposeMesh(s.mesh));
+            spinningGoodGuys = [];
+
+            enemyKnives.forEach(ek => disposeMesh(ek.mesh));
+            enemyKnives = [];
+
+            droppedEnemyKnives.forEach(dk => disposeMesh(dk));
+            droppedEnemyKnives = [];
+
+            if (!isHoldingKnife) {
+                isHoldingKnife = true;
+                isStuckInTarget = false;
+                stuckTarget = null;
+                scene.attach(knife);
+                knife.scale.set(1.2, 1.2, 1.2);
+                knife.rotation.set(0, 0, 0);
+            }
+
+            obstacles.forEach(o => disposeMesh(o.mesh));
+            obstacles = [];
+
+            if (currentGroundMesh) disposeMesh(currentGroundMesh);
+            if (currentGrid) disposeMesh(currentGrid);
+            if (gliderPickupMesh) scene.remove(gliderPickupMesh);
+        }
+
+        function triggerRecursiveTerrainTransition() {
+            currentPlatformIndex++;
+            depthValEl.textContent = currentPlatformIndex;
+
+            if (currentPlatformIndex > highestStageCleared) {
+                highestStageCleared = currentPlatformIndex;
+                localStorage.setItem('prophunt_max_stage_cleared', highestStageCleared.toString());
+                updateHighestStageDisplay();
+            }
+
+            if (clearanceBeaconMesh) {
+                scene.remove(clearanceBeaconMesh);
+                clearanceBeaconMesh = null;
+            }
+
+            purgeOldStageAssets();
+
+            currentPlatformOffset.copy(nextPlatformOffset);
+            currentGroundMesh = nextGroundMesh;
+            currentGrid = nextGrid;
+            obstacles = nextObstacles;
+
+            gliderPickupMesh = nextGliderPickupMesh;
+            currentGliderPickupPos.copy(nextGliderPickupPos);
+
+            nextPlatformOffset.add(PLATFORM_OFFSET_STEP);
+            nextGroundMesh = createTerrainMesh(nextPlatformOffset);
+            nextGrid = createGridHelper(nextPlatformOffset);
+
+            nextObstacles = [];
+            spawnObstaclesForPlatform(nextPlatformOffset, nextObstacles);
+
+            nextGliderPickupMesh = createGliderPickup();
+            nextGliderPickupPos.copy(nextPlatformOffset).add(GLIDER_RELATIVE_POS);
+            nextGliderPickupPos.y = getTerrainHeight(nextGliderPickupPos.x, nextGliderPickupPos.z);
+            nextGliderPickupMesh.position.copy(nextGliderPickupPos);
+            scene.add(nextGliderPickupMesh);
+
+            hasGlider = false;
+            isGliding = false;
+            isFreeFalling = false;
+            activeGliderMesh.visible = false;
+            gliderStatusEl.textContent = "NONE";
+            gliderStatusEl.style.color = "#f1c40f";
+
+            resetTargets();
+        }
+
+        function createTerrainMesh(offset) {
+            const groundGeometry = new THREE.PlaneGeometry(200, 200, 80, 80);
+            const posAttr = groundGeometry.attributes.position;
+
+            for (let i = 0; i < posAttr.count; i++) {
+                const vx = posAttr.getX(i);
+                const vy = posAttr.getY(i);
+                posAttr.setZ(i, calculateRawTerrainHeight(vx, -vy, 0));
+            }
+
+            groundGeometry.computeVertexNormals();
+
+            const colorVal = isNightMode ? 0x112211 : 0x3b7a32;
+            const groundMaterial = new THREE.MeshStandardMaterial({ 
+                color: colorVal, 
+                roughness: 0.85, 
+                flatShading: true,
+                side: THREE.DoubleSide 
+            });
+            const mesh = new THREE.Mesh(groundGeometry, groundMaterial);
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.position.copy(offset);
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            return mesh;
+        }
+
+        function createGridHelper(offset) {
+            if (isHillsMode) return null;
+            const gridColor = isNightMode ? 0x1c331c : 0x4f9c44;
+            const gridCenterColor = isNightMode ? 0x1c331c : 0x2c5c24;
+            const grid = new THREE.GridHelper(200, 50, gridColor, gridCenterColor);
+            grid.position.copy(offset);
+            grid.position.y += 0.01;
+            scene.add(grid);
+            return grid;
+        }
+
+        function restartGame() {
+            isDead = false;
+            wastedScreen.style.opacity = '0';
+            wastedScreen.style.animation = 'none';
+            pitchBlackScreen.style.display = 'none';
+            tryAgainWastedContainer.style.display = 'none';
+            tryAgainBlackContainer.style.display = 'none';
+            damageFlashEl.style.background = 'rgba(231, 76, 60, 0)';
+
+            playerHealth = 100;
+            healthValEl.textContent = playerHealth;
+
+            currentPlatformIndex = 0;
+            depthValEl.textContent = 0;
+            updateHighestStageDisplay();
+
+            if (clearanceBeaconMesh) {
+                scene.remove(clearanceBeaconMesh);
+                clearanceBeaconMesh = null;
+            }
+
+            currentPlatformOffset.set(0, 0, 0);
+            nextPlatformOffset.copy(currentPlatformOffset).add(PLATFORM_OFFSET_STEP);
+
+            if (currentGroundMesh) disposeMesh(currentGroundMesh);
+            if (currentGrid) disposeMesh(currentGrid);
+            if (nextGroundMesh) disposeMesh(nextGroundMesh);
+            if (nextGrid) disposeMesh(nextGrid);
+
+            currentGroundMesh = createTerrainMesh(currentPlatformOffset);
+            currentGrid = createGridHelper(currentPlatformOffset);
+
+            nextGroundMesh = createTerrainMesh(nextPlatformOffset);
+            nextGrid = createGridHelper(nextPlatformOffset);
+
+            hasGlider = false;
+            isGliding = false;
+            isFreeFalling = false;
+            activeGliderMesh.visible = false;
+            gliderStatusEl.textContent = "NONE";
+            gliderStatusEl.style.color = "#f1c40f";
+
+            stamina = maxStamina;
+            isSprinting = false;
+
+            const spawnPos = currentPlatformOffset.clone().add(GLIDER_RELATIVE_POS);
+            spawnPos.z -= 4.0;
+            spawnPos.y = getTerrainHeight(spawnPos.x, spawnPos.z) + PLAYER_HEIGHT;
+            playerPosition.copy(spawnPos);
+
+            playerVerticalVelocity = 0;
+            isJumping = false;
+            cameraYaw = Math.PI;
+            cameraPitch = 0;
+
+            purgeOldStageAssets();
+            nextObstacles.forEach(o => disposeMesh(o.mesh));
+            nextObstacles = [];
+
+            spawnObstaclesForPlatform(currentPlatformOffset, obstacles);
+            spawnObstaclesForPlatform(nextPlatformOffset, nextObstacles);
+            setupRecursiveStageItems();
+
+            resetTargets();
+
+            isHoldingKnife = true;
+            isStuckInTarget = false;
+            stuckTarget = null;
+            scene.attach(knife);
+            knife.scale.set(1.2, 1.2, 1.2);
+            knife.rotation.set(0, 0, 0);
+
+            applyEnvironmentStyles();
+        }
+
+        function drawStaminaWheel() {
+            staminaCtx.clearRect(0, 0, 100, 100);
+            if (stamina >= maxStamina && !isSprinting && !isGliding) return;
+
+            const centerX = 50;
+            const centerY = 50;
+            const radius = 36;
+            const innerRadius = 26;
+
+            staminaCtx.beginPath();
+            staminaCtx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            staminaCtx.arc(centerX, centerY, innerRadius, Math.PI * 2, 0, true);
+            staminaCtx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+            staminaCtx.fill();
+
+            const fillFraction = stamina / maxStamina;
+            const startAngle = -Math.PI / 2;
+            const endAngle = startAngle + (Math.PI * 2 * fillFraction);
+
+            staminaCtx.beginPath();
+            staminaCtx.arc(centerX, centerY, radius, startAngle, endAngle, false);
+            staminaCtx.arc(centerX, centerY, innerRadius, endAngle, startAngle, true);
+            staminaCtx.closePath();
+            
+            staminaCtx.fillStyle = isGliding ? 'rgba(52, 152, 219, 0.95)' : (stamina < 25 ? 'rgba(243, 156, 18, 0.9)' : 'rgba(46, 204, 113, 0.9)');
+            staminaCtx.fill();
+        }
+
+        function spawnObstaclesForPlatform(platformOffsetVec, obstacleArray) {
+            const logMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.9 });
+            const stumpMat = new THREE.MeshStandardMaterial({ color: 0x4a3322, roughness: 0.9 });
+
+            for (let i = 0; i < 18; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const distance = 8 + Math.random() * 55;
+                const x = platformOffsetVec.x + Math.sin(angle) * distance;
+                const z = platformOffsetVec.z - Math.cos(angle) * distance;
+
+                const groundY = getTerrainHeight(x, z);
+
+                if (Math.random() < 0.6) {
+                    const logGeo = new THREE.CylinderGeometry(0.5, 0.5, 4 + Math.random() * 3, 12);
+                    const log = new THREE.Mesh(logGeo, logMat);
+                    log.position.set(x, groundY + 0.5, z);
+                    log.rotation.z = Math.PI / 2;
+                    log.rotation.y = Math.random() * Math.PI;
+                    log.castShadow = true;
+                    log.receiveShadow = true;
+                    scene.add(log);
+                    obstacleArray.push({ mesh: log, type: 'log', radius: 0.6, length: 5 });
+                } else {
+                    const stumpGeo = new THREE.CylinderGeometry(0.8, 1.0, 1.5, 10);
+                    const stump = new THREE.Mesh(stumpGeo, stumpMat);
+                    stump.position.set(x, groundY + 0.75, z);
+                    stump.castShadow = true;
+                    stump.receiveShadow = true;
+                    scene.add(stump);
+                    obstacleArray.push({ mesh: stump, type: 'stump', radius: 0.9 });
+                }
+            }
+        }
+
+        function createNightEnvironment() {
+            nightSkyGroup = new THREE.Group();
+
+            const moonGeo = new THREE.SphereGeometry(6, 32, 32);
+            const moonMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+            const moon = new THREE.Mesh(moonGeo, moonMat);
+            moon.position.set(60, 80, -120);
+            nightSkyGroup.add(moon);
+
+            const starGeo = new THREE.BufferGeometry();
+            const starCount = 350;
+            const starPositions = [];
+            starDataAttributes = [];
+
+            for (let i = 0; i < starCount; i++) {
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                const r = 180 + Math.random() * 40;
+
+                const x = r * Math.sin(phi) * Math.cos(theta);
+                const y = Math.abs(r * Math.cos(phi)) + 20;
+                const z = r * Math.sin(phi) * Math.sin(theta);
+
+                starPositions.push(x, y, z);
+                starDataAttributes.push({
+                    baseSize: 1.2 + Math.random() * 1.8,
+                    speed: 2.0 + Math.random() * 4.0,
+                    phase: Math.random() * Math.PI * 2
+                });
+            }
+
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3));
+            const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 2.0, sizeAttenuation: true, transparent: true });
+            starPointsMesh = new THREE.Points(starGeo, starMat);
+            nightSkyGroup.add(starPointsMesh);
+
+            const lineGeo = new THREE.BufferGeometry();
+            const linePositions = new Float32Array(6);
+            lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+            const lineMat = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0,
+                linewidth: 2,
+                blending: THREE.AdditiveBlending
+            });
+            shootingStarLine = new THREE.Line(lineGeo, lineMat);
+            nightSkyGroup.add(shootingStarLine);
+
+            shootingStarData = {
+                active: false,
+                timer: 0,
+                nextSpawnTime: 2.0 + Math.random() * 4.0,
+                posStart: new THREE.Vector3(),
+                posEnd: new THREE.Vector3(),
+                currentProgress: 0,
+                duration: 0.6
+            };
+
+            nightSkyGroup.visible = false;
+            scene.add(nightSkyGroup);
+        }
+
+        function updateNightSkyAnimations(delta, elapsedTime) {
+            if (!isNightMode) return;
+
+            if (starPointsMesh) {
+                nightSkyGroup.rotation.y = elapsedTime * 0.005;
+            }
+
+            if (shootingStarData) {
+                if (!shootingStarData.active) {
+                    shootingStarData.timer += delta;
+                    if (shootingStarData.timer >= shootingStarData.nextSpawnTime) {
+                        shootingStarData.active = true;
+                        shootingStarData.timer = 0;
+                        shootingStarData.nextSpawnTime = 4.0 + Math.random() * 7.0;
+                        shootingStarData.currentProgress = 0;
+                        shootingStarData.duration = 0.4 + Math.random() * 0.5;
+
+                        const startX = (Math.random() - 0.5) * 200;
+                        const startY = 100 + Math.random() * 60;
+                        const startZ = -100 - Math.random() * 80;
+
+                        shootingStarData.posStart.set(startX, startY, startZ);
+                        const angle = Math.random() * Math.PI * 2;
+                        const length = 40 + Math.random() * 50;
+                        shootingStarData.posEnd.copy(shootingStarData.posStart).add(new THREE.Vector3(
+                            Math.cos(angle) * length,
+                            -30 - Math.random() * 30,
+                            Math.sin(angle) * length
+                        ));
+                    }
+                } else {
+                    shootingStarData.currentProgress += delta / shootingStarData.duration;
+                    if (shootingStarData.currentProgress >= 1.0) {
+                        shootingStarData.active = false;
+                        shootingStarLine.material.opacity = 0;
+                    } else {
+                        const curPos = new THREE.Vector3().lerpVectors(
+                            shootingStarData.posStart,
+                            shootingStarData.posEnd,
+                            shootingStarData.currentProgress
+                        );
+                        const tailPos = new THREE.Vector3().lerpVectors(
+                            shootingStarData.posStart,
+                            shootingStarData.posEnd,
+                            Math.max(0, shootingStarData.currentProgress - 0.25)
+                        );
+
+                        const posAttr = shootingStarLine.geometry.attributes.position;
+                        posAttr.setXYZ(0, curPos.x, curPos.y, curPos.z);
+                        posAttr.setXYZ(1, tailPos.x, tailPos.y, tailPos.z);
+                        posAttr.needsUpdate = true;
+
+                        const fadeInOut = Math.sin(shootingStarData.currentProgress * Math.PI);
+                        shootingStarLine.material.opacity = fadeInOut * 0.9;
+                    }
+                }
+            }
+        }
+
+        function resetTargets() {
+            targets.forEach(t => scene.remove(t));
+            targets = [];
+            
+            spinningGoodGuys.forEach(s => scene.remove(s.mesh));
+            spinningGoodGuys = [];
+
+            totalEnemiesSpawnedThisStage = 0;
+            targetTotalEnemiesForThisStage = Math.floor(Math.random() * 11) + 3;
+            
+            if (currentPlatformIndex > 0) {
+                const initialCount = Math.min(3, targetTotalEnemiesForThisStage);
+                for (let i = 0; i < initialCount; i++) {
+                    spawnTarget();
+                }
+            }
+            updateEnemiesRemainingUI();
+        }
+
+        function createKnifeModel(isEnemy) {
+            const knifeGroup = new THREE.Group();
+            
+            const bladeMat = new THREE.MeshStandardMaterial({ 
+                color: isEnemy ? 0x111111 : 0x222222, 
+                metalness: 0.9, 
+                roughness: 0.25 
+            });
+            
+            const bladeGeo = new THREE.BoxGeometry(0.07, 0.52, 0.015);
+            const blade = new THREE.Mesh(bladeGeo, bladeMat);
+            blade.position.y = 0.31;
+            blade.castShadow = true;
+            knifeGroup.add(blade);
+
+            const tipGeo = new THREE.ConeGeometry(0.035, 0.15, 4);
+            const tip = new THREE.Mesh(tipGeo, bladeMat);
+            tip.rotation.y = Math.PI / 4;
+            tip.position.y = 0.645;
+            tip.castShadow = true;
+            knifeGroup.add(tip);
+
+            const handleGeo = new THREE.BoxGeometry(0.06, 0.38, 0.025);
+            const handleMat = new THREE.MeshStandardMaterial({ 
+                color: isEnemy ? 0x440000 : 0x111111, 
+                roughness: 0.8 
+            });
+            const handle = new THREE.Mesh(handleGeo, handleMat);
+            handle.position.y = -0.19;
+            handle.castShadow = true;
+            knifeGroup.add(handle);
+
+            const accentGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.03, 12);
+            const accentMat = isEnemy ? 
+                new THREE.MeshStandardMaterial({ color: 0xff0000, roughness: 0.3 }) : 
+                new THREE.MeshStandardMaterial({ color: 0x00ffcc, emissive: 0x00ffcc, emissiveIntensity: 0.8, roughness: 0.2 });
+            
+            const accent = new THREE.Mesh(accentGeo, accentMat);
+            accent.rotation.z = Math.PI / 2;
+            accent.position.set(0, -0.34, 0);
+            knifeGroup.add(accent);
+
+            knifeGroup.scale.set(1.2, 1.2, 1.2);
+            return knifeGroup;
+        }
+
+        function createGoodGuyTargetMesh(scale) {
+            const goodGuyGroup = new THREE.Group();
+            const radii = [1.0, 0.75, 0.5, 0.25];
+            const goodGuyColors = [0xffffff, 0x3498db, 0xffffff, 0x3498db];
+
+            for (let i = 0; i < radii.length; i++) {
+                const ringGeo = new THREE.CylinderGeometry(radii[i], radii[i], 0.1, 32);
+                const ringMat = new THREE.MeshStandardMaterial({ color: goodGuyColors[i], roughness: 0.4 });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI / 2;
+                ring.castShadow = true;
+                ring.receiveShadow = true;
+                goodGuyGroup.add(ring);
+            }
+
+            goodGuyGroup.scale.set(scale, scale, scale);
+            return goodGuyGroup;
+        }
+
+        function spawnTarget() {
+            if (currentPlatformIndex === 0) return;
+            if (totalEnemiesSpawnedThisStage >= targetTotalEnemiesForThisStage) return;
+            totalEnemiesSpawnedThisStage++;
+
+            const targetGroup = new THREE.Group();
+
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 8 + Math.random() * 7;
+
+            const spawnX = playerPosition.x + Math.sin(angle) * distance;
+            const spawnZ = playerPosition.z - Math.cos(angle) * distance;
+            const groundY = getTerrainHeight(spawnX, spawnZ);
+            const height = groundY + 1.2 + Math.random() * 1.5;
+            
+            targetGroup.position.set(spawnX, height, spawnZ);
+            targetGroup.lookAt(playerPosition.x, height, playerPosition.z);
+
+            const mainTargetGroup = new THREE.Group();
+            const radii = [1.0, 0.75, 0.5, 0.25];
+            const enemyColors = [0xffffff, 0xe74c3c, 0xffffff, 0xe74c3c];
+
+            for (let i = 0; i < radii.length; i++) {
+                const ringGeo = new THREE.CylinderGeometry(radii[i], radii[i], 0.1, 32);
+                const ringMat = new THREE.MeshStandardMaterial({ color: enemyColors[i], roughness: 0.4 });
+                const ring = new THREE.Mesh(ringGeo, ringMat);
+                ring.rotation.x = Math.PI / 2;
+                ring.castShadow = true;
+                ring.receiveShadow = true;
+                mainTargetGroup.add(ring);
+            }
+            targetGroup.add(mainTargetGroup);
+
+            const goodGuyMeshes = [];
+            const count = Math.floor(Math.random() * 4) + 2;
+            const isOscillatingTarget = Math.random() < 0.5;
+            const startAngle = Math.random() * Math.PI * 2;
+
+            for (let i = 0; i < count; i++) {
+                const scale = 0.3 + Math.random() * 0.4;
+                const goodGuyGroup = createGoodGuyTargetMesh(scale);
+                
+                let offsetX = 0;
+                let offsetY = 0;
+                let offsetZ = 0;
+                let sweepRange = 1.8;
+                let oscSpeed = 1.5 + Math.random() * 3.5;
+                let oscPhase = Math.random() * Math.PI * 2;
+
+                if (isOscillatingTarget) {
+                    offsetZ = 0.25;
+                    offsetY = (i - (count - 1) / 2) * (scale * 1.5);
+                    offsetX = Math.sin(oscPhase) * sweepRange;
+                } else {
+                    const posAngle = startAngle + (i * (Math.PI * 2 / count)) + (Math.random() * 0.3 - 0.15);
+                    const distFromCenter = 1.0 + (scale * 0.7);
+                    offsetX = Math.cos(posAngle) * distFromCenter;
+                    offsetY = Math.sin(posAngle) * distFromCenter;
+                }
+                
+                goodGuyGroup.position.set(offsetX, offsetY, offsetZ);
+                targetGroup.add(goodGuyGroup);
+
+                goodGuyMeshes.push({
+                    mesh: goodGuyGroup,
+                    scale: scale,
+                    radius: 1.1 * scale,
+                    isOscillating: isOscillatingTarget,
+                    oscSpeed: oscSpeed,
+                    oscPhase: oscPhase,
+                    sweepRange: sweepRange,
+                    baseY: offsetY,
+                    offsetZ: offsetZ
+                });
+            }
+
+            const combatStyle = Math.floor(Math.random() * 3);
+            const speedFactor = Math.random() < 0.4 ? (0.6 + Math.random() * 0.6) : (1.6 + Math.random() * 1.8);
+
+            targetGroup.userData = {
+                mainMesh: mainTargetGroup,
+                goodGuyMeshes: goodGuyMeshes,
+                baseYOffset: height - groundY,
+                hoverSpeed: 2 + Math.random() * 2,
+                hoverOffset: Math.random() * Math.PI * 2,
+                behavior: combatStyle,
+                moveDirection: 1,
+                moveSpeed: speedFactor,
+                circleAngle: angle,
+                circleRadius: 8 + Math.random() * 14,
+                circleSpeed: (Math.random() - 0.5) * 1.2,
+                isHit: false,
+                hitTimer: 0,
+                throwTimer: Math.random() * 2.0,
+                throwInterval: 2.2 + Math.random() * 2.0
+            };
+
+            scene.add(targetGroup);
+            targets.push(targetGroup);
+            updateEnemiesRemainingUI();
+        }
+
+        function triggerTargetHit(target) {
+            target.userData.isHit = true;
+            updateEnemiesRemainingUI();
+
+            target.userData.goodGuyMeshes.forEach(gg => {
+                const worldPos = new THREE.Vector3();
+                const worldQuat = new THREE.Quaternion();
+                gg.mesh.getWorldPosition(worldPos);
+                gg.mesh.getWorldQuaternion(worldQuat);
+
+                target.remove(gg.mesh);
+                scene.add(gg.mesh);
+
+                gg.mesh.position.copy(worldPos);
+                gg.mesh.quaternion.copy(worldQuat);
+
+                spinningGoodGuys.push({
+                    mesh: gg.mesh,
+                    upSpeed: 18 + Math.random() * 8,
+                    spinSpeed: 12 + Math.random() * 8
+                });
+            });
+
+            target.userData.goodGuyMeshes = [];
+        }
+
+        function triggerJump() {
+            let currentGroundY = getTerrainHeight(playerPosition.x, playerPosition.z);
+
+            if (!isJumping && playerPosition.y <= currentGroundY + PLAYER_HEIGHT + 0.1) {
+                playerVerticalVelocity = JUMP_FORCE;
+                isJumping = true;
+            }
+        }
+
+        function handleInteractClick() {
+            if (isHoldingKnife && closestTargetInRange) {
+                performMelee(closestTargetInRange);
+            } else {
+                interactWithKnife();
+            }
+        }
+
+        function performMelee(target) {
+            if (!target || target.userData.isHit || !isHoldingKnife) return;
+            
+            const mainPos = new THREE.Vector3();
+            target.userData.mainMesh.getWorldPosition(mainPos);
+
+            for (let gg of target.userData.goodGuyMeshes) {
+                const goodGuyPos = new THREE.Vector3();
+                gg.mesh.getWorldPosition(goodGuyPos);
+
+                const distToGoodGuy = playerPosition.distanceTo(goodGuyPos);
+                if (distToGoodGuy < playerPosition.distanceTo(mainPos)) {
+                    playerHealth = 0;
+                    healthValEl.textContent = 0;
+                    triggerPitchBlackState();
+                    return;
+                }
+            }
+
+            triggerTargetHit(target);
+            
+            scene.attach(knife);
+            knife.position.copy(target.worldToLocal(playerPosition.clone().add(new THREE.Vector3(0, 0.2, 0))));
+            knife.scale.set(1.2, 1.2, 1.2).divide(target.scale);
+            knife.rotation.set(0, 0, 0);
+            knife.rotateX(Math.PI / 2);
+            
+            isStuckInTarget = true;
+            stuckTarget = target;
+            isHoldingKnife = false;
+        }
+
+        function interactWithKnife() {
+            if (isHoldingKnife) {
+                isHoldingKnife = false;
+                isStuckInTarget = false;
+                stuckTarget = null;
+
+                const cameraDirection = new THREE.Vector3();
+                camera.getWorldDirection(cameraDirection);
+
+                const timeSinceSprintTap = (performance.now() - lastSprintTapTime) / 1000;
+                const recentSprintBonus = (isSprinting || timeSinceSprintTap <= 1.8) ? 2.25 : 1.0;
+
+                knife.position.copy(camera.position).add(cameraDirection.clone().multiplyScalar(1));
+                knife.quaternion.copy(camera.quaternion);
+
+                knifeVelocity.copy(cameraDirection).multiplyScalar(BASE_THROW_FORCE * recentSprintBonus);
+                knifeVelocity.y += 2.5 * recentSprintBonus;
+
+                spinAxis.set(0, 1, 0).cross(cameraDirection).normalize();
+                spinSpeed = 16.0 * recentSprintBonus;
+
+            } else {
+                const knifeWorldPos = new THREE.Vector3();
+                knife.getWorldPosition(knifeWorldPos);
+
+                if (camera.position.distanceTo(knifeWorldPos) <= PICKUP_DISTANCE) {
+                    isHoldingKnife = true;
+                    isStuckInTarget = false;
+                    stuckTarget = null;
+                    scene.attach(knife); 
+                    knife.scale.set(1.2, 1.2, 1.2);
+                    knife.rotation.set(0, 0, 0);
+                    return;
+                }
+
+                for (let i = droppedEnemyKnives.length - 1; i >= 0; i--) {
+                    const dk = droppedEnemyKnives[i];
+                    if (camera.position.distanceTo(dk.position) <= PICKUP_DISTANCE) {
+                        scene.remove(dk);
+                        droppedEnemyKnives.splice(i, 1);
+
+                        scene.remove(knife);
+                        knife = dk;
+                        isHoldingKnife = true;
+                        isStuckInTarget = false;
+                        stuckTarget = null;
+                        scene.attach(knife);
+                        knife.scale.set(1.2, 1.2, 1.2);
+                        knife.rotation.set(0, 0, 0);
+                        break;
+                    }
+                }
+            }
+        }
+
+        function takeDamage() {
+            if (isDead) return;
+
+            const damage = Math.floor(Math.random() * 11) + 8;
+            playerHealth = Math.max(0, playerHealth - damage);
+            healthValEl.textContent = playerHealth;
+
+            damageFlashEl.style.background = 'rgba(231, 76, 60, 0.4)';
+            setTimeout(() => {
+                damageFlashEl.style.background = 'rgba(231, 76, 60, 0)';
+            }, 150);
+
+            if (playerHealth <= 0) {
+                triggerWastedState();
+            }
+        }
+
+        function triggerWastedState() {
+            isDead = true;
+            if (document.pointerLockElement) document.exitPointerLock();
+            wastedScreen.style.opacity = '1';
+            wastedScreen.style.animation = 'redBlueFlash 0.6s steps(1, end) infinite';
+            wastedText.style.animation = 'pulseEffect 1.8s ease-in-out infinite';
+            tryAgainWastedContainer.style.display = 'flex';
+            syncToggleUIState();
+        }
+
+        function triggerPitchBlackState() {
+            isDead = true;
+            if (document.pointerLockElement) document.exitPointerLock();
+            pitchBlackScreen.style.display = 'block';
+            tryAgainBlackContainer.style.display = 'flex';
+            syncToggleUIState();
+        }
+
+        function spawnEnemyKnife(fromTarget) {
+            const eKnife = createKnifeModel(true);
+            eKnife.position.copy(fromTarget.position);
+            
+            const targetPos = playerPosition.clone();
+            targetPos.y = playerPosition.y;
+
+            const throwSpread = (Math.random() - 0.5) * 2.8;
+            targetPos.x += throwSpread;
+            targetPos.z += (Math.random() - 0.5) * 2.8;
+
+            const throwDir = targetPos.clone().sub(fromTarget.position).normalize();
+            
+            let baseThrowSpeed = 21 + Math.random() * 7; 
+            let speedMultiplier = 1.0;
+            if (fromTarget.userData.moveSpeed >= 2.0) {
+                speedMultiplier = 1.0 + Math.min(0.6, (fromTarget.userData.moveSpeed - 2.0) * 0.3);
+            }
+            const enemyThrowSpeed = baseThrowSpeed * speedMultiplier;
+
+            const velocity = throwDir.clone().multiplyScalar(enemyThrowSpeed);
+            velocity.y += (3.5 + Math.random() * 1.3) * speedMultiplier;
+
+            const axis = new THREE.Vector3(0, 1, 0).cross(throwDir).normalize();
+            eKnife.lookAt(targetPos);
+
+            scene.add(eKnife);
+            enemyKnives.push({
+                mesh: eKnife,
+                velocity: velocity,
+                spinAxis: axis,
+                spinSpeed: (20.0 + Math.random() * 8.0) * speedMultiplier
+            });
+        }
+
+        // Standard HTML5 Gamepad Processing Loop
+        function pollGamepad(delta) {
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            let gp = null;
+            for (let i = 0; i < gamepads.length; i++) {
+                if (gamepads[i]) {
+                    gp = gamepads[i];
+                    break;
+                }
+            }
+
+            if (!gp) return;
+
+            const applyDeadzone = (val, threshold = 0.15) => {
+                return Math.abs(val) < threshold ? 0 : (val > 0 ? (val - threshold) / (1 - threshold) : (val + threshold) / (1 - threshold));
+            };
+
+            const hasButton = (idx) => gp.buttons[idx] && gp.buttons[idx].pressed;
+            const hasAxisValue = (axisIdx, targetVal) => gp.axes[axisIdx] !== undefined && Math.abs(gp.axes[axisIdx] - targetVal) < 0.15;
+            const hasAxisRange = (axisIdx, direction) => {
+                if (gp.axes[axisIdx] === undefined) return false;
+                return direction === 'left' ? gp.axes[axisIdx] < -0.5 : gp.axes[axisIdx] > 0.5;
+            };
+
+            const dpadLeftPressed = hasButton(14) || hasAxisRange(6, 'left') || hasAxisRange(4, 'left') || hasAxisValue(9, -0.43) || hasAxisValue(9, -0.71);
+            if (dpadLeftPressed && !prevGamepadButtonStates['dpad_left']) {
+                isNightMode = !isNightMode;
+                syncToggleUIState();
+            }
+            prevGamepadButtonStates['dpad_left'] = dpadLeftPressed;
+
+            const dpadRightPressed = hasButton(15) || hasAxisRange(6, 'right') || hasAxisRange(4, 'right') || hasAxisValue(9, 0.43) || hasAxisValue(9, 0.71);
+            if (dpadRightPressed && !prevGamepadButtonStates['dpad_right']) {
+                isHillsMode = !isHillsMode;
+                rebuildTerrains();
+                syncToggleUIState();
+            }
+            prevGamepadButtonStates['dpad_right'] = dpadRightPressed;
+
+            const bButtonPressed = gp.buttons[1] && gp.buttons[1].pressed;
+            const rbButtonPressed = gp.buttons[5] && gp.buttons[5].pressed;
+            const menuInteractPressed = bButtonPressed || rbButtonPressed;
+
+            if (!isGameStarted) {
+                if (menuInteractPressed && !prevGamepadButtonStates['menu_interact']) {
+                    instructions.style.display = 'none';
+                    isGameStarted = true;
+                    restartGame();
+                    document.body.requestPointerLock();
+                }
+                prevGamepadButtonStates['menu_interact'] = menuInteractPressed;
+                return;
+            }
+
+            if (isDead) {
+                if (menuInteractPressed && !prevGamepadButtonStates['menu_interact']) {
+                    restartGame();
+                    document.body.requestPointerLock();
+                }
+                prevGamepadButtonStates['menu_interact'] = menuInteractPressed;
+                return;
+            }
+
+            // --- Right Analog Stick: Camera Aiming ---
+            const rx = applyDeadzone(gp.axes[2] !== undefined ? gp.axes[2] : 0);
+            let rawRy = gp.axes[3];
+            if (rawRy === undefined || Math.abs(rawRy) < 0.05) {
+                if (gp.axes[5] !== undefined) rawRy = gp.axes[5];
+            }
+            const ry = applyDeadzone(rawRy || 0);
+
+            const stickLookSpeed = 2.2;
+            cameraYaw -= rx * stickLookSpeed * delta;
+            cameraPitch -= ry * stickLookSpeed * delta;
+            cameraPitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, cameraPitch));
+
+            // --- Left Analog Stick: Player Movement ---
+            let lx = applyDeadzone(gp.axes[0]);
+            let lz = applyDeadzone(gp.axes[1]);
+
+            if (Math.abs(lx) > 0.05 || Math.abs(lz) > 0.05) {
+                moveInput.x = -lx;
+                moveInput.y = lz;
+            }
+
+            // --- Left Shoulder Button (LB / Button 4): Sprint ---
+            const lbPressed = gp.buttons[4] && gp.buttons[4].pressed;
+            if (lbPressed) isSprinting = stamina > 5;
+
+            // --- Face Button A (Button 0): Jump ---
+            const aButtonPressed = gp.buttons[0] && gp.buttons[0].pressed;
+            if (aButtonPressed && !prevGamepadButtonStates[0]) {
+                triggerJump();
+            }
+            prevGamepadButtonStates[0] = aButtonPressed;
+
+            // --- Face Button X / Y (Buttons 2 & 3): Toggle Glider / Free Fall ---
+            const xButtonPressed = gp.buttons[2] && gp.buttons[2].pressed;
+            const yButtonPressed = gp.buttons[3] && gp.buttons[3].pressed;
+            const glideActionPressed = xButtonPressed || yButtonPressed;
+
+            if (glideActionPressed && !prevGamepadButtonStates['glide_toggle']) {
+                if (hasGlider && (isGliding || isFreeFalling)) {
+                    toggleFreeFallMode();
+                }
+            }
+            prevGamepadButtonStates['glide_toggle'] = glideActionPressed;
+
+            // --- Face Button B (Button 1) or RB (Button 5): Throw / Pick Up / Melee ---
+            const interactPressed = menuInteractPressed;
+            if (interactPressed && !prevGamepadButtonStates['interact']) {
+                handleInteractClick();
+            }
+            prevGamepadButtonStates['interact'] = interactPressed;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            prevTime = time;
+
+            if (isGameStarted && !isDead) {
+                updateKeyboardInput();
+            }
+            pollGamepad(delta);
+
+            updateNightSkyAnimations(delta, time);
+
+            if (gliderPickupMesh && gliderPickupMesh.visible) {
+                gliderPickupMesh.children[0].rotation.y += 1.2 * delta;
+                gliderPickupMesh.children[0].position.y = 0.8 + Math.sin(time * 0.003) * 0.15;
+            }
+            if (nextGliderPickupMesh && nextGliderPickupMesh.visible) {
+                nextGliderPickupMesh.children[0].rotation.y += 1.2 * delta;
+                nextGliderPickupMesh.children[0].position.y = 0.8 + Math.sin(time * 0.003) * 0.15;
+            }
+
+            if (isGameStarted && !isDead) {
+                if (!hasGlider) {
+                    if (gliderPickupMesh && gliderPickupMesh.visible && playerPosition.distanceTo(currentGliderPickupPos) < 3.0) {
+                        hasGlider = true;
+                        gliderPickupMesh.visible = false;
+                        gliderStatusEl.textContent = "EQUIPPED";
+                        gliderStatusEl.style.color = "#2ecc71";
+                    } else if (nextGliderPickupMesh && nextGliderPickupMesh.visible && playerPosition.distanceTo(nextGliderPickupPos) < 3.0) {
+                        hasGlider = true;
+                        nextGliderPickupMesh.visible = false;
+                        gliderStatusEl.textContent = "EQUIPPED";
+                        gliderStatusEl.style.color = "#2ecc71";
+                    }
+                }
+
+                if (currentPlatformIndex > 0) {
+                    targetSpawnTimer += delta;
+                    const spawnInterval = 2.2;
+
+                    if (targetSpawnTimer >= spawnInterval && totalEnemiesSpawnedThisStage < targetTotalEnemiesForThisStage) {
+                        targetSpawnTimer = 0;
+                        spawnTarget();
+                    }
+                }
+
+                const isMoving = Math.abs(moveInput.x) > 0.05 || Math.abs(moveInput.y) > 0.05;
+                if (isGliding) {
+                    stamina = Math.max(0, stamina - GLIDER_STAMINA_DRAIN * delta);
+                    staminaRechargeTimer = 0;
+                    staminaContainer.style.opacity = '1';
+                    if (stamina <= 0) {
+                        isGliding = false;
+                        isFreeFalling = true;
+                        activeGliderMesh.visible = false;
+                    }
+                } else if (isSprinting && isMoving && stamina > 0) {
+                    stamina = Math.max(0, stamina - STAMINA_DRAIN_RATE * delta);
+                    staminaRechargeTimer = 0;
+                    staminaContainer.style.opacity = '1';
+                    if (stamina <= 0) {
+                        isSprinting = false;
+                    }
+                } else {
+                    staminaRechargeTimer += delta;
+                    if (staminaRechargeTimer >= STAMINA_RECHARGE_DELAY && stamina < maxStamina) {
+                        stamina = Math.min(maxStamina, stamina + STAMINA_RECHARGE_RATE * delta);
+                    }
+                }
+
+                if (stamina >= maxStamina && !isSprinting && !isGliding) {
+                    staminaContainer.style.opacity = '0';
+                } else {
+                    staminaContainer.style.opacity = '1';
+                }
+                drawStaminaWheel();
+
+                closestTargetInRange = null;
+                if (isHoldingKnife) {
+                    let minDistance = Infinity;
+                    for (let t of targets) {
+                        if (!t.userData.isHit) {
+                            const dist = playerPosition.distanceTo(t.position);
+                            if (dist < minDistance) {
+                                minDistance = dist;
+                                closestTargetInRange = t;
+                            }
+                        }
+                    }
+
+                    if (minDistance > MELEE_RANGE) {
+                        closestTargetInRange = null;
+                    }
+                }
+
+                for (let i = spinningGoodGuys.length - 1; i >= 0; i--) {
+                    const sg = spinningGoodGuys[i];
+                    sg.mesh.position.y += sg.upSpeed * delta;
+                    sg.mesh.rotation.y += sg.spinSpeed * delta;
+                    sg.mesh.rotation.z += (sg.spinSpeed * 0.5) * delta;
+
+                    if (sg.mesh.position.y > currentPlatformOffset.y + 100) {
+                        scene.remove(sg.mesh);
+                        spinningGoodGuys.splice(i, 1);
+                    }
+                }
+
+                for (let i = targets.length - 1; i >= 0; i--) {
+                    const t = targets[i];
+
+                    if (t.userData.isHit) {
+                        t.userData.hitTimer += delta;
+                        let scaleStep = 1.0 - (delta / 1.0);
+                        t.userData.mainMesh.scale.multiplyScalar(Math.max(0, scaleStep));
+
+                        if (isStuckInTarget && stuckTarget === t) {
+                            knife.scale.set(1.2, 1.2, 1.2).divide(t.userData.mainMesh.scale);
+                        }
+
+                        if (t.userData.hitTimer >= 1.0) {
+                            if (isStuckInTarget && stuckTarget === t) {
+                                isStuckInTarget = false;
+                                stuckTarget = null;
+                                scene.attach(knife);
+                                knife.scale.set(1.2, 1.2, 1.2);
+                                knifeVelocity.set(0, -2, 0);
+                            }
+                            scene.remove(t);
+                            targets.splice(i, 1);
+                            updateEnemiesRemainingUI();
+                            continue;
+                        }
+                    } else {
+                        const targetGroundY = getTerrainHeight(t.position.x, t.position.z);
+                        t.position.y = targetGroundY + t.userData.baseYOffset + Math.sin(time * 0.002 * t.userData.hoverSpeed + t.userData.hoverOffset) * 0.3;
+
+                        if (t.userData.goodGuyMeshes) {
+                            for (let gg of t.userData.goodGuyMeshes) {
+                                if (gg.isOscillating) {
+                                    const oscX = Math.sin((time * 0.001 * gg.oscSpeed) + gg.oscPhase) * gg.sweepRange;
+                                    gg.mesh.position.set(oscX, gg.baseY, gg.offsetZ);
+                                }
+                            }
+                        }
+
+                        if (t.userData.behavior === 1) {
+                            const dirToPlayer = new THREE.Vector3().subVectors(playerPosition, t.position);
+                            dirToPlayer.y = 0;
+                            dirToPlayer.normalize();
+
+                            if (t.position.distanceTo(playerPosition) > 4.0) {
+                                t.position.addScaledVector(dirToPlayer, t.userData.moveSpeed * delta);
+                            }
+                            t.lookAt(playerPosition.x, t.position.y, playerPosition.z);
+                        } 
+                        else if (t.userData.behavior === 2) {
+                            t.userData.circleAngle += t.userData.circleSpeed * delta;
+                            t.position.x = playerPosition.x + Math.sin(t.userData.circleAngle) * t.userData.circleRadius;
+                            t.position.z = playerPosition.z - Math.cos(t.userData.circleAngle) * t.userData.circleRadius;
+                            t.lookAt(playerPosition.x, t.position.y, playerPosition.z);
+                        }
+                        else if (t.userData.behavior === 0) {
+                            const dirToPlayer = new THREE.Vector3().subVectors(playerPosition, t.position);
+                            dirToPlayer.y = 0;
+                            dirToPlayer.normalize();
+
+                            t.position.addScaledVector(dirToPlayer, t.userData.moveDirection * t.userData.moveSpeed * delta);
+                            const distToPlayer = t.position.distanceTo(playerPosition);
+                            if (distToPlayer < 7 || distToPlayer > 30) {
+                                t.userData.moveDirection *= -1;
+                            }
+                            t.lookAt(playerPosition.x, t.position.y, playerPosition.z);
+                        }
+
+                        t.userData.throwTimer += delta;
+                        if (t.userData.throwTimer >= t.userData.throwInterval) {
+                            t.userData.throwTimer = 0;
+                            t.userData.throwInterval = 2.2 + Math.random() * 2.0;
+                            spawnEnemyKnife(t);
+                        }
+                    }
+                }
+
+                for (let i = enemyKnives.length - 1; i >= 0; i--) {
+                    const ek = enemyKnives[i];
+                    ek.velocity.y -= GRAVITY * delta;
+                    ek.mesh.position.addScaledVector(ek.velocity, delta);
+                    ek.mesh.rotateOnWorldAxis(ek.spinAxis, ek.spinSpeed * delta);
+
+                    if (ek.mesh.position.distanceTo(playerPosition) < 1.3 && Math.abs(ek.mesh.position.y - playerPosition.y) < 1.2) {
+                        takeDamage();
+                        scene.remove(ek.mesh);
+                        enemyKnives.splice(i, 1);
+                        continue;
+                    }
+
+                    const knifeGroundY = getTerrainHeight(ek.mesh.position.x, ek.mesh.position.z);
+                    if (ek.mesh.position.y <= knifeGroundY + 0.35) {
+                        ek.mesh.position.y = knifeGroundY + 0.35;
+                        ek.mesh.rotation.set(Math.PI / 2, 0, 0);
+                        
+                        droppedEnemyKnives.push(ek.mesh);
+                        if (droppedEnemyKnives.length > 20) {
+                            const oldKnife = droppedEnemyKnives.shift();
+                            scene.remove(oldKnife);
+                        }
+
+                        enemyKnives.splice(i, 1);
+                        continue;
+                    }
+
+                    if (ek.mesh.position.distanceTo(playerPosition) > 120) {
+                        scene.remove(ek.mesh);
+                        enemyKnives.splice(i, 1);
+                    }
+                }
+
+                camera.rotation.x = cameraPitch;
+                camera.rotation.y = cameraYaw;
+
+                if (isMoving) {
+                    let currentSpeedFactor = 6.0;
+                    if (isGliding) currentSpeedFactor = 14.0;
+                    else if (isSprinting && stamina > 0) currentSpeedFactor = 11.0;
+
+                    const moveSpeed = currentSpeedFactor * delta;
+                    const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+                    const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), cameraYaw);
+
+                    let nextX = playerPosition.x - moveInput.y * moveSpeed * forward.x - moveInput.x * moveSpeed * side.x;
+                    let nextZ = playerPosition.z - moveInput.y * moveSpeed * forward.z - moveInput.x * moveSpeed * side.z;
+
+                    let enemiesLeft = getEnemiesRemaining();
+                    if (enemiesLeft > 0) {
+                        const maxBoundZ = currentPlatformOffset.z + 92;
+                        const minBoundZ = currentPlatformOffset.z - 92;
+                        const maxBoundX = currentPlatformOffset.x + 92;
+                        const minBoundX = currentPlatformOffset.x - 92;
+
+                        if (nextZ > maxBoundZ || nextZ < minBoundZ || nextX > maxBoundX || nextX < minBoundX) {
+                            showAreaExitWarning();
+                            if (nextZ > maxBoundZ || nextZ < minBoundZ) nextZ = playerPosition.z;
+                            if (nextX > maxBoundX || nextX < minBoundX) nextX = playerPosition.x;
+                        }
+                    }
+
+                    let collided = false;
+                    const allObs = obstacles.concat(nextObstacles);
+                    for (let obs of allObs) {
+                        const dist = Math.hypot(nextX - obs.mesh.position.x, nextZ - obs.mesh.position.z);
+                        if (dist < obs.radius + 0.4) {
+                            collided = true;
+                            break;
+                        }
+                    }
+
+                    if (!collided) {
+                        playerPosition.x = nextX;
+                        playerPosition.z = nextZ;
+                    }
+                }
+
+                let currentGroundY = getTerrainHeight(playerPosition.x, playerPosition.z);
+
+                if (hasGlider && !isGliding && !isFreeFalling && playerPosition.y > currentGroundY + PLAYER_HEIGHT + 0.8 && stamina > 0 && playerVerticalVelocity <= 0) {
+                    isGliding = true;
+                    activeGliderMesh.visible = true;
+                }
+
+                if (isGliding) {
+                    const GLIDE_TERMINAL_FALL_SPEED = -1.8;
+                    playerVerticalVelocity = THREE.MathUtils.lerp(playerVerticalVelocity, GLIDE_TERMINAL_FALL_SPEED, delta * 6.0);
+                    playerPosition.y += playerVerticalVelocity * delta;
+
+                    const gliderOffset = new THREE.Vector3(0, 0.45, -0.6);
+                    gliderOffset.applyQuaternion(camera.quaternion);
+                    activeGliderMesh.position.copy(camera.position).add(gliderOffset);
+                    activeGliderMesh.rotation.copy(camera.rotation);
+
+                    if (playerPosition.y <= currentGroundY + PLAYER_HEIGHT) {
+                        playerPosition.y = currentGroundY + PLAYER_HEIGHT;
+                        playerVerticalVelocity = 0;
+                        isJumping = false;
+                        isGliding = false;
+                        isFreeFalling = false;
+                        activeGliderMesh.visible = false;
+
+                        let nextRelZ = playerPosition.z - nextPlatformOffset.z;
+                        if (Math.abs(nextRelZ) <= 100) {
+                            if (getEnemiesRemaining() === 0) {
+                                triggerRecursiveTerrainTransition();
+                            } else {
+                                showAreaExitWarning();
+                            }
+                        }
+                    }
+                } else if (isFreeFalling) {
+                    playerVerticalVelocity -= GRAVITY * 1.2 * delta;
+                    playerPosition.y += playerVerticalVelocity * delta;
+
+                    playerPosition.x += glideForwardVelocity.x * 0.4 * delta;
+                    playerPosition.z += glideForwardVelocity.z * 0.4 * delta;
+
+                    if (playerPosition.y <= currentGroundY + PLAYER_HEIGHT) {
+                        playerPosition.y = currentGroundY + PLAYER_HEIGHT;
+                        playerVerticalVelocity = 0;
+                        isJumping = false;
+                        isGliding = false;
+                        isFreeFalling = false;
+                        activeGliderMesh.visible = false;
+
+                        let nextRelZ = playerPosition.z - nextPlatformOffset.z;
+                        if (Math.abs(nextRelZ) <= 100) {
+                            if (getEnemiesRemaining() === 0) {
+                                triggerRecursiveTerrainTransition();
+                            } else {
+                                showAreaExitWarning();
+                            }
+                        }
+                    }
+                } else if (isJumping || playerPosition.y > currentGroundY + PLAYER_HEIGHT) {
+                    playerVerticalVelocity -= GRAVITY * 1.2 * delta;
+                    playerPosition.y += playerVerticalVelocity * delta;
+
+                    if (playerPosition.y <= currentGroundY + PLAYER_HEIGHT) {
+                        playerPosition.y = currentGroundY + PLAYER_HEIGHT;
+                        playerVerticalVelocity = 0;
+                        isJumping = false;
+
+                        let nextRelZ = playerPosition.z - nextPlatformOffset.z;
+                        if (Math.abs(nextRelZ) <= 100) {
+                            if (getEnemiesRemaining() === 0) {
+                                triggerRecursiveTerrainTransition();
+                            } else {
+                                showAreaExitWarning();
+                            }
+                        }
+                    }
+                } else {
+                    playerPosition.y = currentGroundY + PLAYER_HEIGHT;
+                }
+
+                if (playerPosition.y < currentPlatformOffset.y - 120) {
+                    triggerWastedState();
+                }
+
+                camera.position.copy(playerPosition);
+
+                if (isNightMode) {
+                    flashlight.position.copy(camera.position);
+                    const camDir = new THREE.Vector3();
+                    camera.getWorldDirection(camDir);
+                    flashlight.target.position.copy(camera.position).add(camDir.multiplyScalar(20));
+                }
+
+                if (isHoldingKnife) {
+                    const holdOffset = new THREE.Vector3(0.35, -0.35, -0.8);
+                    holdOffset.applyQuaternion(camera.quaternion);
+                    knife.position.copy(camera.position).add(holdOffset);
+                    knife.rotation.copy(camera.rotation);
+                    knife.rotateX(Math.PI / 2);
+                } else if (isStuckInTarget) {
+                    // Pinned
+                } else {
+                    knifeVelocity.y -= GRAVITY * delta;
+                    knife.position.x += knifeVelocity.x * delta;
+                    knife.position.y += knifeVelocity.y * delta;
+                    knife.position.z += knifeVelocity.z * delta;
+
+                    knife.rotateOnWorldAxis(spinAxis, spinSpeed * delta);
+
+                    for (let i = 0; i < targets.length; i++) {
+                        const t = targets[i];
+                        if (!t.userData.isHit) {
+                            let hitGoodGuy = false;
+
+                            for (let gg of t.userData.goodGuyMeshes) {
+                                const goodGuyWorldPos = new THREE.Vector3();
+                                gg.mesh.getWorldPosition(goodGuyWorldPos);
+
+                                if (knife.position.distanceTo(goodGuyWorldPos) < gg.radius) {
+                                    hitGoodGuy = true;
+                                    break;
+                                }
+                            }
+
+                            if (hitGoodGuy) {
+                                playerHealth = 0;
+                                healthValEl.textContent = 0;
+                                triggerPitchBlackState();
+                                break;
+                            }
+
+                            const enemyWorldPos = new THREE.Vector3();
+                            t.userData.mainMesh.getWorldPosition(enemyWorldPos);
+
+                            if (knife.position.distanceTo(enemyWorldPos) < 1.1) {
+                                isStuckInTarget = true;
+                                stuckTarget = t;
+                                triggerTargetHit(t); 
+
+                                const hitPoint = knife.position.clone();
+                                t.userData.mainMesh.attach(knife); 
+                                knife.position.copy(t.userData.mainMesh.worldToLocal(hitPoint));
+                                knife.scale.set(1.2, 1.2, 1.2).divide(t.userData.mainMesh.scale);
+
+                                knife.rotation.set(0, 0, 0);
+                                knife.rotateX(Math.PI / 2);
+                                knife.translateZ(-0.4);
+                                break;
+                            }
+                        }
+                    }
+
+                    const knifeGroundY = getTerrainHeight(knife.position.x, knife.position.z);
+                    if (!isStuckInTarget && knife.position.y <= knifeGroundY + 0.35) {
+                        knife.position.y = knifeGroundY + 0.35;
+                        knifeVelocity.set(0, 0, 0);
+                        spinSpeed = 0;
+                        knife.scale.set(1.2, 1.2, 1.2);
+                        knife.rotation.set(Math.PI / 2, 0, 0);
+                    }
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
