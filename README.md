@@ -14,3 +14,4 @@ save the princess, shit idk if there's a princess
 
 
 
+pro tip... super status bar custom change nothing except size set to zero it's 15 then battery bar and color and size and align how you want 
