@@ -396,8 +396,8 @@
         <div>PropHunt</div>
         <div id="health-container">HEALTH: <span id="health-val">100</span></div>
         <div id="knockdown-container">ENEMIES: <span id="knockdown-val">0</span></div>
-        <div id="depth-container">STAGE: <span id="depth-val">1</span></div>
-        <div id="best-depth-container">BEST: <span id="best-depth-val">1</span></div>
+        <div id="depth-container">STAGE: <span id="depth-val">0</span></div>
+        <div id="best-depth-container">BEST: <span id="best-depth-val">0</span></div>
         <div id="glider-status-container">GLIDER: <span id="glider-val">NONE</span></div>
     </div>
 
@@ -477,7 +477,7 @@
 
         // Stage & Persistent Storage Metrics
         let currentPlatformIndex = 0;
-        let highestStageCleared = parseInt(localStorage.getItem('prophunt_max_stage_cleared') || '1', 10);
+        let highestStageCleared = parseInt(localStorage.getItem('prophunt_max_stage_cleared') || '0', 10);
         
         let totalEnemiesSpawnedThisStage = 0;
         let targetTotalEnemiesForThisStage = 5; // Will be randomly generated between 3 and 13 per stage
@@ -1068,10 +1068,10 @@
 
         function triggerRecursiveTerrainTransition() {
             currentPlatformIndex++;
-            depthValEl.textContent = currentPlatformIndex + 1;
+            depthValEl.textContent = currentPlatformIndex;
 
-            if (currentPlatformIndex + 1 > highestStageCleared) {
-                highestStageCleared = currentPlatformIndex + 1;
+            if (currentPlatformIndex > highestStageCleared) {
+                highestStageCleared = currentPlatformIndex;
                 localStorage.setItem('prophunt_max_stage_cleared', highestStageCleared.toString());
                 updateHighestStageDisplay();
             }
@@ -1167,7 +1167,7 @@
             healthValEl.textContent = playerHealth;
 
             currentPlatformIndex = 0;
-            depthValEl.textContent = 1;
+            depthValEl.textContent = currentPlatformIndex;
             updateHighestStageDisplay();
 
             if (clearanceBeaconMesh) {
